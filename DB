@@ -126,3 +126,15 @@ def gettema(prf):
     return cursor.execute(f"SELECT tema, authors FROM theme WHERE prfl IN {prf}").fetchall()
     db.close()
     cursor.close()
+def record(tema):
+    # инициализация соединения с базой в ф-и (2 строчки ниже)
+    db = sqlite3.connect(databasename)
+    cursor = db.cursor()
+    # получение предыдушего значения
+    View=(f"SELECT view FROM theme WHERE tema=='{tema}'").fetchone()
+    NewView=View+1
+    # перезапись
+    cursor.execute(f'UPDATE theme SET view = "{NewView}" WHERE tema=="{tema}"')
+    db.commit()
+    db.close()
+    cursor.close()
