@@ -1,0 +1,128 @@
+import sqlite3
+databasename="User_data.db"
+with sqlite3.connect(databasename) as db:
+    cursor= db.cursor()
+    #создание базы данных если такой не существует
+    cursor.execute("CREATE TABLE IF NOT EXISTS theme(id INTEGER PRIMARY KEY AUTOINCREMENT,tema,prfl,authors,followers)")
+#СОЗДАНИЕ ТЕМЫ
+def addtheme(msg, user_id, prf):
+    #инициализация соединения с базой в ф-и (2 строчки ниже)
+    db = sqlite3.connect(databasename)
+    cursor = db.cursor()
+    #выделение темы из строки
+    tm = msg.replace('!предложить тему ', '', 1)
+    #поиск темы в базе и проверка на наличие
+    cursor.execute(f"SELECT tema FROM theme WHERE tema=='{tm}'")
+    if not (cursor.fetchone() is None):
+        #если тема есть в базе перезапись ячейки авторов
+        Autors = cursor.execute(f"SELECT authors FROM theme WHERE tema=='{tm}'").fetchone()[0]
+        #если автор есть в ячейке перезапись не производится
+        if not (f', <@{user_id}>' in Autors):
+            NewAutors = Autors + f', <@{user_id}>'
+            cursor.execute(f'UPDATE theme SET authors = "{NewAutors}" WHERE tema=="{tm}"')
+            db.commit()
+        #Вывод строки для печати
+        return f'Вы добавлены в список авторов'
+    else:
+        #если темы нету до добавляет новую строчку
+        ADD = [tm, prf, f', <@{user_id}>']
+        cursor.execute("INSERT INTO theme(tema,prfl,authors) VALUES(?,?,?)", ADD)
+        Autors = cursor.execute(f"SELECT authors FROM theme WHERE tema=='{tm}'").fetchone()[0]
+        db.commit()
+        #Вывод строки для печати
+        return f'Ваша тема {tm} записана'
+    db.close()
+    cursor.close()
+#УДАЛЕНИЕ ТЕМЫ
+def removetheme(msg, user_id):
+    #инициализация соединения с базой в ф-и (2 строчки ниже)
+    db = sqlite3.connect(databasename)
+    cursor = db.cursor()
+    # выделение темы из строки
+    tm = msg.replace('!удалить тему ', '', 1)
+    # проверка на наличие темы с указанным автором
+    src=f"SELECT tema FROM theme WHERE tema=='{tm}' AND authors LIKE '%{user_id}%'"
+    cursor.execute(src)
+    if (cursor.fetchone() is None):
+        return "Тема не найдена"
+    else:
+        # перезапись авторства
+        Autors = cursor.execute(f"SELECT authors FROM theme WHERE tema=='{tm}' AND authors LIKE '%{user_id}%'").fetchone()[0]
+        NewAutors = Autors.replace(f", <@{user_id}>","",1)
+        cursor.execute(f'UPDATE theme SET authors = "{NewAutors}" WHERE tema=="{tm}" AND authors LIKE "%{user_id}%" ')
+        db.commit()
+        return f'Вы удалены из авторов темы {tm}'
+    db.close()
+    cursor.close()
+#СПИСОК ТЕМ
+def mytheme(user_id):
+    # инициализация соединения с базой в ф-и (2 строчки ниже)
+    db = sqlite3.connect(databasename)
+    cursor = db.cursor()
+    etm=cursor.execute(f"SELECT tema FROM theme WHERE authors LIKE '%{user_id}%'").fetchall()
+    stm = cursor.execute(f"SELECT tema FROM theme WHERE followers LIKE '%{user_id}%'").fetchall()
+    # Генерация пасты на выдачу
+    e=""
+    s=""
+    for i in etm:
+        e+="\n         >"+i[0]
+    for i in stm:
+        s+="\n         >" + i[0]
+    return "Ваши темы:\n    Написанные:"+ e +"\n    Сохранёные:" + s
+    db.close()
+    cursor.close()
+def follow(msg,user_id,flw):
+    # инициализация соединения с базой в ф-и (2 строчки ниже)
+    db = sqlite3.connect(databasename)
+    cursor = db.cursor()
+    tm=msg
+    #развилка на подписку/отписку
+    if flw:
+        #получение строки авторов и подписоты
+        Followers = cursor.execute(f"SELECT followers FROM theme WHERE tema=='{tm}'").fetchone()
+        Authors = cursor.execute(f"SELECT Authors FROM theme WHERE tema=='{tm}'").fetchone()
+        #анти нил
+        if Followers is None:
+            NewFollowers=f'<@{user_id}>'
+        else:
+            NewFollowers=Followers[0]+f'<@{user_id}>'
+        if Authors is None:
+            Authors=''
+        else:
+            Authors=Authors[0]
+        #если чел авторах темы
+        if f'<@{user_id}>' in Authors:
+            return "Собственная тема не может быть сохраненна"
+        else:
+            # если чел в подписоте темы
+            if not(Followers is None) and f'<@{user_id}>' in Followers:
+                return "Тема уже была сохранена"
+            else:
+                #если всё норм
+                cursor.execute(f'UPDATE theme SET followers = "{NewFollowers}" WHERE tema=="{tm}"')
+                db.commit()
+                return "Тема сохранена"
+    else:
+        Followers = cursor.execute(f"SELECT followers FROM theme WHERE tema=='{tm}' AND followers LIKE '%{user_id}%'").fetchone()
+        # если чел не в списке подписоты темы
+        if Followers is None:
+            return "Тема не была сохранена"
+        else:
+            #если всё норм
+            NewFollowers = Followers[0].replace(f'<@{user_id}>',"",1)
+            cursor.execute(f'UPDATE theme SET followers = "{NewFollowers}" WHERE tema=="{tm}" AND followers LIKE "%{user_id}%"')
+            db.commit()
+            return "Тема удалена из сохранённых"
+    db.close()
+    cursor.close()
+def gettema(prf):
+    # инициализация соединения с базой в ф-и (2 строчки ниже)
+    db = sqlite3.connect(databasename)
+    cursor = db.cursor()
+    # преобразование массива в строку чтоб WHERE его нормально схавал (join иди нахуй)
+    prf="("+str(prf).replace("[","",1).replace("]","",1)+")"
+    print(prf)
+    #выдача списком все темы по профилю и их авторы
+    return cursor.execute(f"SELECT tema, authors FROM theme WHERE prfl IN {prf}").fetchall()
+    db.close()
+    cursor.close()
