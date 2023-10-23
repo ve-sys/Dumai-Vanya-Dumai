@@ -3,7 +3,7 @@ databasename="User_data.db"
 with sqlite3.connect(databasename) as db:
     cursor= db.cursor()
     #создание базы данных если такой не существует
-    cursor.execute("CREATE TABLE IF NOT EXISTS theme(id INTEGER PRIMARY KEY AUTOINCREMENT,tema,prfl,authors,followers)")
+    cursor.execute("CREATE TABLE IF NOT EXISTS theme(id INTEGER PRIMARY KEY AUTOINCREMENT,tema,prfl,authors,followers,view)")
 #СОЗДАНИЕ ТЕМЫ
 def addtheme(msg, user_id, prf):
     #инициализация соединения с базой в ф-и (2 строчки ниже)
@@ -25,8 +25,8 @@ def addtheme(msg, user_id, prf):
         return f'Вы добавлены в список авторов'
     else:
         #если темы нету до добавляет новую строчку
-        ADD = [tm, prf, f', <@{user_id}>']
-        cursor.execute("INSERT INTO theme(tema,prfl,authors) VALUES(?,?,?)", ADD)
+        ADD = [tm, prf, f', <@{user_id}>','',0]
+        cursor.execute("INSERT INTO theme(tema,prfl,authors,followers,view) VALUES(?,?,?,?,?)", ADD)
         Autors = cursor.execute(f"SELECT authors FROM theme WHERE tema=='{tm}'").fetchone()[0]
         db.commit()
         #Вывод строки для печати
@@ -115,7 +115,7 @@ def follow(msg,user_id,flw):
             return "Тема удалена из сохранённых"
     db.close()
     cursor.close()
-def gettema(prf):
+def gettema(prf,user_id):
     # инициализация соединения с базой в ф-и (2 строчки ниже)
     db = sqlite3.connect(databasename)
     cursor = db.cursor()
@@ -123,7 +123,7 @@ def gettema(prf):
     prf="("+str(prf).replace("[","",1).replace("]","",1)+")"
     print(prf)
     #выдача списком все темы по профилю и их авторы
-    return cursor.execute(f"SELECT tema, authors FROM theme WHERE prfl IN {prf}").fetchall()
+    return cursor.execute(f"SELECT tema,authors,followers,view FROM theme WHERE prfl IN {prf} AND followers NOT LIKE '%{user_id}%' ").fetchall()
     db.close()
     cursor.close()
 def record(tema):
@@ -131,10 +131,10 @@ def record(tema):
     db = sqlite3.connect(databasename)
     cursor = db.cursor()
     # получение предыдушего значения
-    View=(f"SELECT view FROM theme WHERE tema=='{tema}'").fetchone()
-    NewView=View+1
+    View=cursor.execute(f"SELECT view FROM theme WHERE tema=='{tema}'").fetchone()
+    NewView=int(View[0])+1
     # перезапись
-    cursor.execute(f'UPDATE theme SET view = "{NewView}" WHERE tema=="{tema}"')
+    cursor.execute(f'UPDATE theme SET view = {NewView} WHERE tema=="{tema}"')
     db.commit()
-    db.close()
     cursor.close()
+    db.close()
