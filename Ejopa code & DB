@@ -133,14 +133,29 @@ async def on_raw_reaction_add(date):
             await msg.add_reaction('🔄')
         # Выдача темы ищущему
         if str(date.emoji) == '🔄':
-            # print(pseudotheme)
             if len(uroles) > 2:
                 prf = []
                 for h in uroles:
                     if h in prfl:
                         prf.append(h)
-                tema = DB.gettema(prf)
-                mess = random.choice(tema)
+                tema = DB.gettema(prf,date.user_id)
+                print("Дебаг базы")
+                #1 критерий минимальное количество просмотров
+                min_view=min([int(x[3]) for x in tema])
+                print(min_view)
+                #2 максимальное колическво авторов для тем где количество просмотров равно минимальному
+                max_authors=max([x[1].count("@") for x in tema if int(x[3])==min_view])
+                print(max_authors)
+                #3 минимально количество фоловеров для тем где: количество просмотров соответствует минимальному и количество авторов соответствует максимальному
+                min_follow=min([x[2].count("@") for x in tema if int(x[3])==min_view and x[1].count("@")==max_authors])
+                print(min_follow)
+                #4 массив на выход состоящий из кортежей строк удовлетворяющих условию: количество просмотров равно минимальному, количество авторов равно максимальному и количество фолловеров равно минимальному
+                out=[x for x in tema if int(x[3])==min_view and x[1].count("@")==max_authors and x[2].count("@")==min_follow]
+                # рандом из того что осталось
+                mess = random.choice(out)
+                #+ просмотр на выбранную тему
+                DB.record(mess[0])
+                # вывод
                 msg = await member.send(mess[0]+" Предложил(и):"+mess[1][2:])
                 await msg.add_reaction('🔄')
                 await msg.add_reaction('✅')
@@ -184,6 +199,4 @@ async def on_raw_reaction_remove(date):
             channel=await member.create_dm()
             msg=await channel.fetch_message(date.message_id)
             await member.send(DB.follow(msg.content,date.user_id,False))
-
-
 bot.run(token)
