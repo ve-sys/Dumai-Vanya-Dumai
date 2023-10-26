@@ -16,8 +16,10 @@ async def on_ready():
     guild = bot.guilds[0]
     global basedstrE
     global basedstrS
-    basedstrE = '''1) Вы можете выбрать профиль для своего проекта:'''
-    basedstrS = '''1) Вы можете выбрать профиль для своего проекта:'''
+    basedstrE = '''
+    🎯\n1) Вы можете выбрать профиль для своего проекта:'''
+    basedstrS = '''
+    ❔\n1) Вы можете выбрать профиль для своего проекта:'''
     for i in range(len(prfl)):
             basedstrE += f'\n{eprfl[i]} - {prfl[i]}'
             basedstrS += f'\n{sprfl[i]} - {prfl[i]}'
@@ -37,7 +39,7 @@ async def on_message(message):
 ❔ - Если вы в поисках темы для проекта
 🎯 - Если вы готовы предложить идею или проблему
 \n(Для более подробной информации о работе бота пишите !help)'''
-            msg = await message.channel.send(mess)
+            msg = await message.reply(mess)
             await msg.add_reaction('❔')
             await msg.add_reaction('🎯')
             print(f'{message.author}|{message.author.id}|{message.content}:')
@@ -51,23 +53,23 @@ async def on_message(message):
                 for h in range(1, len(uroles)):
                     if uroles[h] in prfl:
                         prf=uroles[h]
-                await message.channel.send(DB.addtheme(msg, message.author.id, prf))
+                await message.reply(DB.addtheme(msg, message.author.id, prf))
             elif "Ищущие тем" in uroles:
-                await message.channel.send('Вам не положено добавлять тему')
+                await message.reply('Вам не положено добавлять тему')
         if message.content.startswith('!удалить тему'):
             if "Создатели тем" in uroles:
                 msg = message.content
-                await message.channel.send(DB.removetheme(msg, message.author.id))
+                await message.reply(DB.removetheme(msg, message.author.id))
             elif "Ищущие тем" in uroles:
                 tema = message.content.replace("!удалить тему ", "", 1)
-                await message.author.send(DB.follow(tema, message.author.id, False))
+                await message.reply(DB.follow(tema, message.author.id, False))
         if message.content.startswith('!мои темы'):
             mess =str((DB.mytheme(message.author.id))) +\
                   '\nВы можете посмотреть всю информацию по любой теме прописав !просмотреть информацию **название темы**'
-            await message.channel.send(mess)
+            await message.reply(mess)
         if message.content.startswith('!просмотреть информацию '):
             msg = message.content
-            await message.author.send(DB.infa_full(msg))
+            await message.reply(DB.infa_full(msg))
         if message.content.startswith('!help'):
             mess1='''**Приветствую. Вы вызвали справку по работе бота**
 ﻿
@@ -114,9 +116,9 @@ async def on_message(message):
 - !мои темы - команда выдает список написанных вами тем и тем, добавленных в избранное
 - !просмотреть информацию <...> - команда позволяет узнать точные данные о теме
 (пример - сообщение "!просмотреть информацию Крабовый салат" выдаст вам информацию о составе авторов, количестве просмотров тем, количество людей, добавивших в избранное)'''
-            await message.author.send(mess1)
-            await message.author.send(mess2)
-            await message.author.send(mess3)
+            await message.reply(mess1)
+            await message.reply(mess2)
+            await message.reply(mess3)
 @bot.event
 async def on_raw_reaction_add(date):
     global guild
@@ -124,6 +126,8 @@ async def on_raw_reaction_add(date):
     # Выдается роль ищущего или предлагающего
     member = guild.get_member(date.user_id)
     if member != bot.user:
+        channel = await member.create_dm()
+        message = await channel.fetch_message(date.message_id)
         uroles = []
         for x in (member.roles):
             uroles.append(x.name)
@@ -140,7 +144,7 @@ async def on_raw_reaction_add(date):
                     await member.remove_roles(Role)
             global basedstrE
             mess = basedstrE
-            msg = await member.send(mess)
+            msg = await message.reply(mess)
             await msg.add_reaction('🧬')
             await msg.add_reaction('⚙️')
             await msg.add_reaction('📈')
@@ -152,7 +156,7 @@ async def on_raw_reaction_add(date):
             await member.remove_roles(role2)
             global basedstrS
             mess = basedstrS
-            msg = await member.send(mess)
+            msg = await message.reply(mess)
             await msg.add_reaction('🦠')
             await msg.add_reaction('🔩')
             await msg.add_reaction('📋')
@@ -168,7 +172,7 @@ async def on_raw_reaction_add(date):
                     role = disnake.utils.get(guild.roles, name=prfl[eprfl.index(str(date.emoji))])
                     await member.add_roles(role)
                     mess = f'Итак, ваш профиль - {prfl[eprfl.index(str(date.emoji))]}\nЧтобы предложить тему напишите "!предложить тему" \n (пример: !предложить тему **ваша тема**)'
-                    await member.send(mess)
+                    await message.reply(mess)
                     print(l + "send", prfl[eprfl.index(str(date.emoji))])
                 else:
                     role2 = disnake.utils.get(guild.roles, name=prfl[eprfl.index(l)])
@@ -181,7 +185,7 @@ async def on_raw_reaction_add(date):
             print(guild, member)
             await member.add_roles(role)
             mess = 'Для того, чтобы получить новую тему нажмите 🔄\nДля того, чтобы сохранить тему в избранное нажмите ⭐'
-            msg = await member.send(mess)
+            msg = await message.reply(mess)
             await msg.add_reaction('🔄')
         # Выдача темы ищущему
         if str(date.emoji) == '🔄':
@@ -191,32 +195,35 @@ async def on_raw_reaction_add(date):
                     if h in prfl:
                         prf.append(h)
                 tema = DB.gettema(prf,date.user_id)
-                print("Дебаг базы")
-                #1 критерий минимальное количество просмотров
-                min_view=min([int(x[3]) for x in tema])
-                print(min_view)
-                #2 максимальное колическво авторов для тем где количество просмотров равно минимальному
-                max_authors=max([x[1].count("@") for x in tema if int(x[3])==min_view])
-                print(max_authors)
-                #3 минимально количество фоловеров для тем где: количество просмотров соответствует минимальному и количество авторов соответствует максимальному
-                min_follow=min([x[2].count("@") for x in tema if int(x[3])==min_view and x[1].count("@")==max_authors])
-                print(min_follow)
-                #4 массив на выход состоящий из кортежей строк удовлетворяющих условию: количество просмотров равно минимальному, количество авторов равно максимальному и количество фолловеров равно минимальному
-                out=[x for x in tema if int(x[3])==min_view and x[1].count("@")==max_authors and x[2].count("@")==min_follow]
-                # рандом из того что осталось
-                mess = random.choice(out)
-                #+ просмотр на выбранную тему
-                DB.record(mess[0])
-                # вывод
-                msg = await member.send(mess[0]+" Предложил(и):"+mess[1][2:])
-                await msg.add_reaction('🔄')
-                await msg.add_reaction('⭐')
+                if len(tema)>0:
+                    print("Дебаг базы")
+                    # 1 критерий минимальное количество просмотров
+                    min_view = min([int(x[3]) for x in tema])
+                    print(min_view)
+                    # 2 максимальное колическво авторов для тем где количество просмотров равно минимальному
+                    max_authors = max([x[1].count("@") for x in tema if int(x[3]) == min_view])
+                    print(max_authors)
+                    # 3 минимально количество фоловеров для тем где: количество просмотров соответствует минимальному и количество авторов соответствует максимальному
+                    min_follow = min(
+                        [x[2].count("@") for x in tema if int(x[3]) == min_view and x[1].count("@") == max_authors])
+                    print(min_follow)
+                    # 4 массив на выход состоящий из кортежей строк удовлетворяющих условию: количество просмотров равно минимальному, количество авторов равно максимальному и количество фолловеров равно минимальному
+                    out = [x for x in tema if
+                           int(x[3]) == min_view and x[1].count("@") == max_authors and x[2].count("@") == min_follow]
+                    # рандом из того что осталось
+                    mess = random.choice(out)
+                    # + просмотр на выбранную тему
+                    DB.record(mess[0])
+                    # вывод
+                    msg = await message.reply(mess[0] + " Предложил(и):" + mess[1][2:])
+                    await msg.add_reaction('🔄')
+                    await msg.add_reaction('⭐')
+                else:
+                    await message.reply("Подходящая тема не найдена")
         if str(date.emoji) == '⭐' and "Ищущие тем" in uroles:
-            channel=await member.create_dm()
-            msg=await channel.fetch_message(date.message_id)
-            out=msg.content[:msg.content.index(" Предложил(и):")]
+            out=message.content[:msg.content.index(" Предложил(и):")]
             print(out)
-            await member.send(DB.follow(out,date.user_id,True))
+            await message.reply(DB.follow(out,date.user_id,True))
 @bot.event
 async def on_raw_reaction_remove(date):
     global guild
@@ -250,5 +257,5 @@ async def on_raw_reaction_remove(date):
         if str(date.emoji) == '⭐' and "Ищущие тем" in uroles:
             channel=await member.create_dm()
             msg=await channel.fetch_message(date.message_id)
-            await member.send(DB.follow(msg.content,date.user_id,False))
+            await msg.reply(DB.follow(msg.content,date.user_id,False))
 bot.run(token)
