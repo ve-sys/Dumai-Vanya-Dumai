@@ -2,14 +2,8 @@ import DB
 import disnake
 from disnake.ext import commands
 import random
-token=open("Инфа про бота.txt").readline()[6:]
+token=open("info.txt").readline()[6:]
 bot = commands.Bot(command_prefix='$', help_command=None, intents=disnake.Intents.all())
-pseudotheme = ['1.Разработка лекарства от рака. Предложил(и) @Админ',
-                       '2.Спасение сибирского рока. Предложил(и) @Админ',
-                       '3.Вечный двигатель. Предложил(и) @Админ',
-                       '1.Петунии. Предложил(и) @Админ',
-                       '2.Словарь для 5 класса. Предложил(и) @Админ',
-                       '3.Разработка инди игр. Предложил(и) @Админ']
 prfl= ["Биохим","Соцэконом","Физмат"]
 sprfl=['🦠','📋','🔩']
 eprfl=['🧬','📈','⚙️']
@@ -44,7 +38,6 @@ async def on_message(message):
         for x in (guild.get_member(message.author.id).roles):
             uroles.append(x.name)
         if message.content.startswith('!предложить тему'):
-            global pseudotheme
             if "Создатели тем" in uroles:
                 msg = message.content
                 for h in range(1, len(uroles)):
@@ -58,13 +51,13 @@ async def on_message(message):
                 msg = message.content
                 await message.channel.send(DB.removetheme(msg, message.author.id))
             elif "Ищущие тем" in uroles:
-                await message.channel.send('Если тема нарушает правила пишите в админу')
+                tema = message.content.replace("!удалить тему ", "", 1)
+                await message.author.send(DB.follow(tema, message.author.id, False))
         if message.content.startswith('!мои темы'):
             await message.channel.send(DB.mytheme(message.author.id))
-        if message.content.startswith('!отписаться'):
-            tema=message.content.replace("!отписаться ","",1)
-            await message.author.send(DB.follow(tema, message.author.id, False))
-
+        if message.content.startswith('!просмотреть информацию '):
+            msg = message.content
+            await message.author.send(DB.infa_full(msg))
 @bot.event
 async def on_raw_reaction_add(date):
     global guild
@@ -115,7 +108,7 @@ async def on_raw_reaction_add(date):
                 if str(date.emoji) == l:
                     role = disnake.utils.get(guild.roles, name=prfl[eprfl.index(str(date.emoji))])
                     await member.add_roles(role)
-                    mess = f'Итак, ваш профиль -{prfl[eprfl.index(str(date.emoji))]}\nЧтобы предложить тему напишите "!предложить тему"'
+                    mess = f'Итак, ваш профиль -{prfl[eprfl.index(str(date.emoji))]}\nЧтобы предложить тему напишите "!предложить тему" \n Пример: !предложить тему ВАША ТЕМА'
                     await member.send(mess)
                     print(l + "send", prfl[eprfl.index(str(date.emoji))])
                 else:
