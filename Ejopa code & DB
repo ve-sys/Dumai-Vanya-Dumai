@@ -126,40 +126,40 @@ async def on_raw_reaction_add(date):
     # Выдается роль ищущего или предлагающего
     member = guild.get_member(date.user_id)
     if member != bot.user:
-        channel = await member.create_dm()
-        message = await channel.fetch_message(date.message_id)
         uroles = []
         for x in (member.roles):
             uroles.append(x.name)
-        if str(date.emoji) == '🎯':
-            role = disnake.utils.get(guild.roles, name="Создатели тем")
-            role2 = disnake.utils.get(guild.roles, name="Ищущие тем")
-            print(guild, member)
-            await member.add_roles(role)
-            await member.remove_roles(role2)
-            global prfl
-            for i in uroles:
-                if i in prfl:
-                    Role = disnake.utils.get(guild.roles, name=i)
-                    await member.remove_roles(Role)
-            global basedstrE
-            mess = basedstrE
-            msg = await message.reply(mess)
-            await msg.add_reaction('🧬')
-            await msg.add_reaction('⚙️')
-            await msg.add_reaction('📈')
-        if str(date.emoji) == '❔':
-            role = disnake.utils.get(guild.roles, name="Ищущие тем")
-            role2 = disnake.utils.get(guild.roles, name="Создатели тем")
-            print(guild, member)
-            await member.add_roles(role)
-            await member.remove_roles(role2)
-            global basedstrS
-            mess = basedstrS
-            msg = await message.reply(mess)
-            await msg.add_reaction('🦠')
-            await msg.add_reaction('🔩')
-            await msg.add_reaction('📋')
+        try:message = await member.fetch_message(date.message_id)
+        except:
+            if str(date.emoji) == '🎯':
+                role = disnake.utils.get(guild.roles, name="Создатели тем")
+                role2 = disnake.utils.get(guild.roles, name="Ищущие тем")
+                print(guild, member)
+                await member.add_roles(role)
+                await member.remove_roles(role2)
+                global prfl
+                for i in uroles:
+                    if i in prfl:
+                        Role = disnake.utils.get(guild.roles, name=i)
+                        await member.remove_roles(Role)
+                global basedstrE
+                mess = basedstrE
+                msg = await member.send(mess)
+                await msg.add_reaction('🧬')
+                await msg.add_reaction('⚙️')
+                await msg.add_reaction('📈')
+            if str(date.emoji) == '❔':
+                role = disnake.utils.get(guild.roles, name="Ищущие тем")
+                role2 = disnake.utils.get(guild.roles, name="Создатели тем")
+                print(guild, member)
+                await member.add_roles(role)
+                await member.remove_roles(role2)
+                global basedstrS
+                mess = basedstrS
+                msg = await member.send(mess)
+                await msg.add_reaction('🦠')
+                await msg.add_reaction('🔩')
+                await msg.add_reaction('📋')
         print(uroles)
         # Выдается роль Биохим/Физмат/Соцэк предлагающему (множественный выбор невозможен)
         global pseudotheme
