@@ -3,7 +3,7 @@ databasename="User_data.db"
 with sqlite3.connect(databasename) as db:
     cursor= db.cursor()
     #создание базы данных если такой не существует
-    cursor.execute("CREATE TABLE IF NOT EXISTS theme(id INTEGER PRIMARY KEY AUTOINCREMENT,tema,prfl,authors,followers,view)")
+    cursor.execute("CREATE TABLE IF NOT EXISTS theme(id INTEGER PRIMARY KEY AUTOINCREMENT,tema,prfl,authors,followers,view INTEGER)")
 #СОЗДАНИЕ ТЕМЫ
 def addtheme(msg, user_id, prf):
     #инициализация соединения с базой в ф-и (2 строчки ниже)
@@ -113,8 +113,9 @@ def follow(msg,user_id,flw):
             cursor.execute(f'UPDATE theme SET followers = "{NewFollowers}" WHERE tema=="{tm}" AND followers LIKE "%{user_id}%"')
             db.commit()
             return "Тема удалена из сохранённых"
-    db.close()
+
     cursor.close()
+    db.close()
 def gettema(prf,user_id):
     # инициализация соединения с базой в ф-и (2 строчки ниже)
     db = sqlite3.connect(databasename)
@@ -123,9 +124,9 @@ def gettema(prf,user_id):
     prf="("+str(prf).replace("[","",1).replace("]","",1)+")"
     print(prf)
     #выдача списком все темы по профилю и их авторы
-    return cursor.execute(f"SELECT tema,authors,followers,view FROM theme WHERE prfl IN {prf} AND followers NOT LIKE '%{user_id}%' ").fetchall()
-    db.close()
+    return cursor.execute(f"SELECT tema,authors,followers,view FROM theme WHERE prfl IN {prf} AND followers NOT LIKE '%{user_id}%' AND authors NOT LIKE '%{user_id}%'").fetchall()
     cursor.close()
+    db.close()
 def record(tema):
     # инициализация соединения с базой в ф-и (2 строчки ниже)
     db = sqlite3.connect(databasename)
@@ -136,5 +137,31 @@ def record(tema):
     # перезапись
     cursor.execute(f'UPDATE theme SET view = {NewView} WHERE tema=="{tema}"')
     db.commit()
+    cursor.close()
+    db.close()
+def infa_full(msg):
+    db = sqlite3.connect(databasename)
+    cursor = db.cursor()
+    tm = msg.replace('!просмотреть информацию ', '', 1)
+    tema=cursor.execute(f"SELECT tema FROM theme WHERE tema=='{tm}'").fetchone()
+    # проверка на наличие темы
+    if not (tema is None):
+        # подсчёт кол-во просмотров
+        view = cursor.execute(f"SELECT view FROM theme WHERE tema=='{tm}'").fetchone()[0]
+        flw = cursor.execute(f"SELECT followers FROM theme WHERE tema=='{tm}'").fetchone()
+        # Проверка на наличие фолловеров
+        if not (flw is None):
+            cursor.execute(f"SELECT followers FROM theme WHERE tema=='{tm}'")
+            total_users = cursor.fetchone()[0].count("@")
+        else:
+            total_users=0
+        avtor = cursor.execute(f"SELECT authors FROM theme WHERE tema=='{tm}'").fetchone()
+        if not (avtor is None):
+            Avtors=avtor[0][1:]
+        else:
+            Avtors=""
+        return f"Инфо по теме: \n Авторы темы: {Avtors} \n Общее кол-во просмотров: {view} \n Общее кол-во фолловеров: {total_users}"
+    else:
+        return "Тема не найдена, информации нет"
     cursor.close()
     db.close()
