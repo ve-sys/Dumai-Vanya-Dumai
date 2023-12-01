@@ -1,282 +1,399 @@
-import DB
-import disnake
-from disnake.ext import commands
-import random
-token=open("info.txt").readline()[6:]
-bot = commands.Bot(command_prefix='$', help_command=None, intents=disnake.Intents.all())
-prfl= ["Биохим","Соцэконом","Физмат"]
-sprfl=['🦠','📋','🔩']
-eprfl=['🧬','📈','⚙️']
-@bot.event
-async def on_ready():
-    print(f"Device {bot.user} is set and ready to go")
-    game = disnake.Game("с базой данных")
-    await bot.change_presence(status=disnake.Status.online, activity=game)
-    global guild
-    guild = bot.guilds[0]
-    global basedstrE
-    global basedstrS
-    basedstrE = '''
-    🎯\n1) Вы можете выбрать профиль для своего проекта:'''
-    basedstrS = '''
-    ❔\n1) Вы можете выбрать профиль для своего проекта:'''
-    for i in range(len(prfl)):
-            basedstrE += f'\n{eprfl[i]} - {prfl[i]}'
-            basedstrS += f'\n{sprfl[i]} - {prfl[i]}'
-    basedstrE+='\n2) Вы можете посмотреть свои темы набрав "/моё" и удалить тему из избранных набрав "/удалить тему"'
-    basedstrS+='''\n2) Вы можете предложить тему набрав "/предложитm**"
-3) Вы можете удалить себя из авторов темы набрав "/удалить"'''
+#ГОВНОКОД
+#КОМЕНТАРИИ БЕСПОЛЕЗНЫ
+#С ЛЮБОВЬЮ - ВОРОН
 
-@bot.event
-async def on_message(message):
-    print(f'{message.author}|{message.author.id}|{message.content}:')
-    # Инициализация на серваке
-    if message.author != bot.user:
-        if message.content.startswith('init'):
-            mess = '''Приветствуем вас, дорогой друг, на нашем сервере!
-С помощью нашего бота вы сможете найти/предложить тему для проекта.
-Чтобы выбрать свою роль нажмите на стикер:\n
-❔ - Если вы в поисках темы для проекта
-🎯 - Если вы готовы предложить идею или проблему
-\n(Для более подробной информации о работе бота пишите /помощь)'''
-            msg = await message.reply(mess)
-            await msg.add_reaction('❔')
-            await msg.add_reaction('🎯')
-            print(f'{message.author}|{message.author.id}|{message.content}:')
+from Data import Tema,Users,Commands
+import asyncio
+from aiogram import Bot, Dispatcher, F
+from aiogram.filters import Command
+from aiogram.types import Message,KeyboardButton, ReplyKeyboardMarkup
+from aiogram.types import*
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from random import *
+token="6651522216:AAGJOZa4vgvGpCiqf21PJOUlOYU-7v-Lnjc"
+print(f'Bot is set and ready | {token}')
+bot = Bot(token)
+dp = Dispatcher()
 
-@bot.slash_command(description="Выдает подробную информацию о теме")
-async def инфо(inter, тема: str, ):
-    await inter.response.send_message(DB.infa_full(тема))
+#получение ID юзера
+def uid(auth):
+    id = ''
+    for i in str(auth):
+        id = id + i
+        if i == ' ':
+            break
+    cid = id.replace("id=", '')
+    return cid
 
-@bot.slash_command(description="Предлагает тему")
-async def предложить(inter, тема: str):
-    global guild
-    uroles = []
-    for x in (guild.get_member(inter.author.id).roles):
-        uroles.append(x.name)
-    if "Создатели тем" in uroles:
-        msg = тема
-        for h in range(1, len(uroles)):
-            if uroles[h] in prfl:
-                prf = uroles[h]
-        await inter.response.send_message(DB.addtheme(msg, inter.author.id, prf))
-    elif "Ищущие тем" in uroles:\
-        await inter.response.send_message('Вам не положено добавлять тему')
+#получение юзернейма
+def uun(auth):
+    un = ''
+    sp = 0
+    for i in str(auth):
+        if i ==' ':
+            sp+=1
+        elif sp == 4 and i!=' ':
+            un = un + i
+        elif sp == 5:
+            break
+    cun = un.replace("username=",'')
+    cun = cun.replace("'",'')
+    return cun
 
-@bot.slash_command(description="Удаляет вас из состава авторсв темы")
-async def удалить(inter,тема: str):
-    global guild
-    uroles = []
-    for x in (guild.get_member(inter.author.id).roles):
-        uroles.append(x.name)
-    if "Создатели тем" in uroles:
-        msg = тема
-        await inter.response.send_message(DB.removetheme(msg, inter.author.id))
-    elif "Ищущие тем" in uroles:
-        tema = тема
-        await inter.response.send_message(DB.follow(tema, inter.author.id, False))
 
-@bot.slash_command(description="Выдает список ваших тем")
-async def моё(inter):
-    mess = str((DB.mytheme(inter.author.id))) + \
-           '\nВы можете посмотреть всю информацию по любой теме прописав команду /инфо'
-    await inter.response.send_message(mess)
+#Стартовое сообщение
+@dp.message(Command("start"))
+async def cmd_start(message: Message):
+    print('start',(uun(message.from_user)))
+    User = Users.User(int(uid(message.from_user)), 0,str(uun(message.from_user)), False, "tg", 0)
+    User.add( Show=True)
 
-@bot.slash_command(description='Вызывает сообщение помощи')
-async def помощь(inter):
-    mess1 = '''**Приветствую. Вы вызвали справку по работе бота**
-﻿
-В начале вам предлагается выбрать роль
-﻿:grey_question:﻿   Если вы в поисках темы для проекта
-﻿:dart:﻿   Если вы готов предложить идею или проблему
-Роль можно сменить в процессе работы с ботом
-﻿
-Далее руководство разделится на руководство для тех, кто предлагает, и тех, кто ищет:'''
-    mess2 = '''\n\n**Для тех кто ищет тему:**
-﻿
-**Выбор профиля:**
-Выбор профиля осуществляется посредством реакции на сообщение, присланное ботом после выбора роли 
-:microbe:﻿- Биологическо-химический профиль 
-:clipboard:﻿- Социально-экономический профиль
-:nut_and_bolt:﻿ - Физико-математический профиль
-После выбора профиля, бот будет подбирать только те темы, которые подходят под ваш профиль
-﻿
-**Темы:**
-После выбора профиля, вы сможете получать темы
-Для получения новой темы нажмите  :arrows_counterclockwise:﻿﻿
-Для добавления темы в избранное нажмите :star:﻿ 
-**Команды:**
-- /моё - команда выдает список написанных вами тем и тем, добавленных в избранное
-- /удалить <...> - команда удаляет тему из избранного 
-- /инфо <...> - команда позволяет узнать точные данные о теме
-'''
-    mess3 = '''\n\n **Для тех кто предлагает тему:**
-﻿
-**Выбор профиля:**
-Выбор профиля осуществляется посредством реакции на сообщение, присланное ботом после выбора роли 
-:dna:﻿ - Биологическо-химический профиль 
-:chart_with_upwards_trend:﻿ - Социально-экономический профиль
-:gear:﻿ - Физико-математический профиль
-После выбора профиля, ваши темы будут записываться в соответствующую категорию
-﻿
-**Команды:**
-- /предложить <...> - команда позволяет записать тему в базу тем
-- /удалить <...> - команда удаляет ваше авторство из темы 
-- /моё - команда выдает список написанных вами тем и тем, добавленных в избранное
-- /инфо <...> - команда позволяет узнать точные данные о теме'''
-    await inter.response.send_message(mess1)
-    await inter.author.send(mess2)
-    await inter.author.send(mess3)
+    kb = [[KeyboardButton(text="Биохим"),KeyboardButton(text="Физмат"),KeyboardButton(text="Соцэконом")],]
 
-@bot.slash_command(description="Выдает последний патчноут")
-async def патч(inter):
-    mess ='''Ежупа v.2.0.2
-- Добавлены слеш команды
-- Изменена команда help
-- Добавлен мягкий знак в команду "помощ", теперь это "помощь"'''
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=kb,
+        resize_keyboard=True,
+        input_field_placeholder="Выберете профиль"
+    )
+    await message.answer('Привет, это бот, созданный командой \n"Думай, Ваня, думай"\n', reply_markup=keyboard)
 
-    await inter.response.send_message(mess)
 
-@bot.event
-async def on_raw_reaction_add(date):
-    global guild
-    print('+' + str(date.emoji))
-    # Выдается роль ищущего или предлагающего
-    member = guild.get_member(date.user_id)
-    if member != bot.user:
-        uroles = []
-        for x in (member.roles):
-            uroles.append(x.name)
-        try:message = await member.fetch_message(date.message_id)
+
+#Выбор профиля
+@dp.message((F.text.lower() == "физмат"))
+async def cmd_start(message: Message):
+    id = int(uid(message.from_user))
+    us = (Commands.getuser(id)).name
+    Users.User(id, prfl=1,name=us).add()
+    kb = [[KeyboardButton(text="Задаю"),KeyboardButton(text="Ищу")],]
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=kb,
+        resize_keyboard=True,
+        input_field_placeholder="Выберете задаете ли вы темы, или ищите"
+    )
+    await message.answer('Вы - физмат',reply_markup=keyboard)
+@dp.message((F.text.lower() == "биохим"))
+async def cmd_start(message: Message):
+    id = int(uid(message.from_user))
+    us = (Commands.getuser(id)).name
+    Users.User(id, prfl=2,name=us).add()
+    kb = [[KeyboardButton(text="задаю"),KeyboardButton(text="ищу")],]
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=kb,
+        resize_keyboard=True,
+        input_field_placeholder="Выберете задаете ли вы темы, или ищите"
+    )
+    await message.answer('Вы - биохим',reply_markup=keyboard)
+@dp.message((F.text.lower() == "соцэконом"))
+async def cmd_start(message: Message):
+    id = int(uid(message.from_user))
+    us = (Commands.getuser(id)).name
+    Users.User(id, prfl=3,name=us).add()
+    kb = [[KeyboardButton(text="задаю"),KeyboardButton(text="ищу")],]
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=kb,
+        resize_keyboard=True,
+        input_field_placeholder="Выберете задаете ли вы темы, или ищите"
+    )
+    await message.answer('Вы - соцэконом',reply_markup=keyboard)
+
+
+
+
+#Задаете/Ищите
+@dp.message((F.text.lower() == "задаю"))
+async def cmd_start(message: Message):
+    kb = [
+        [
+            KeyboardButton(text="справка"),
+            KeyboardButton(text="записать"),
+            KeyboardButton(text="удалить"),
+            KeyboardButton(text="мои темы"),
+            KeyboardButton(text="информация по теме")
+        ],
+    ]
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=kb,
+        resize_keyboard=True,
+        input_field_placeholder="Выберете команду"
+    )
+    await message.answer('Вам доступны следущие команды:', reply_markup=keyboard)
+
+@dp.message((F.text.lower() == "ищу"))
+async def cmd_start(message: Message):
+    kb = [
+        [
+            KeyboardButton(text="тема"),
+            KeyboardButton(text="удалить из избранного"),
+            KeyboardButton(text="мои темы"),
+            KeyboardButton(text="информация по теме")
+        ],
+    ]
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=kb,
+        resize_keyboard=True,
+        input_field_placeholder="Выберете команду"
+    )
+    await message.answer('Вам досутпны следущие команды:', reply_markup=keyboard)
+
+
+
+#Справка
+@dp.message(F.text.lower() == "справка")
+async def with_puree(message: Message):
+    mess1 = '''Приветствую. Вы вызвали справку по работе бота
+
+Для тех кто ищет тему:
+- мои темы - команда выдает список написанных вами тем и тем, добавленных в избранное
+- удалить- команда удаляет тему из избранного 
+- информация по теме- команда позволяет узнать точные данные о теме
+Для тех кто предлагает тему:
+- предложить - команда позволяет записать тему в базу тем
+- удалить - команда удаляет ваше авторство из темы 
+- мои темы - команда выдает список написанных вами тем и тем, добавленных в избранное
+- информация по теме - команда позволяет узнать точные данные о теме'''
+    await message.reply("Справка по работе бота:\n"+mess1)
+
+#Добавление/удаление
+@dp.message(F.text.lower() == "записать")
+async def without_puree(message: Message):
+    await message.reply('Пришлите тему отдельным сообщением в формате \n"Тема; Описание темы" ')
+    id = int(uid(message.from_user))
+    pr = (Commands.getuser(id)).prfl
+    us = (Commands.getuser(id)).name
+    Users.User(id, prfl=pr,name=us,cash=1).add(Show=True)
+    print(Commands.getuser(id).name)
+@dp.message(F.text.lower() == "удалить")
+async def without_puree(message: Message):
+    await message.reply("Напишите название темы, которую надо удалить")
+    id = int(uid(message.from_user))
+    pr = (Commands.getuser(id)).prfl
+    us = (Commands.getuser(id)).name
+    Users.User(id, prfl=pr,name=us,cash=2).add(Show=True)
+    print(Commands.getuser(id).name)
+@dp.message(F.text.lower() == "удалить из избранного")
+async def without_puree(message: Message):
+    await message.reply("Напишите название темы, которую надо удалить")
+    id = int(uid(message.from_user))
+    pr = (Commands.getuser(id)).prfl
+    us = (Commands.getuser(id)).name
+    Users.User(id, prfl=pr,name=us,cash=4).add(Show=True)
+    print(Commands.getuser(id).name)
+@dp.message(F.text.lower() == "информация по теме")
+async def without_puree(message: Message):
+    await message.reply("Напишите название темы, информацию о которой хотите узнать")
+    id = int(uid(message.from_user))
+    pr = (Commands.getuser(id)).prfl
+    us = (Commands.getuser(id)).name
+    Users.User(id, prfl=pr, name=us, cash=3).add(Show=True)
+    print(Commands.getuser(id).name)
+
+
+@dp.message(F.text.lower() == "мои темы")
+async def without_puree(message: Message):
+    id = int(uid(message.from_user))
+    print(str((Commands.getuser(id))))
+    mess = 'Список ваших тем\n\nДобавленное вами:'
+    F = str((Commands.getUserTemes(id))).replace("'",'').replace('[','').replace(']','').replace(',','').replace('(','-').replace(')','')
+    for x in F:
+        if x != '-':
+            mess = mess+x
+        else:
+            mess = mess+'\n-'
+    mess += '\n\nВ избранном:'
+    F = str((Commands.getUserFavs(id))).replace("'", '').replace('[', '').replace(']', '').replace(',', '').replace(
+        '(', '-').replace(')', '')
+    for x in F:
+        if x != '-':
+            mess = mess + x
+        else:
+            mess = mess + '\n-'
+    mess += '\n\nЯ решаю:'
+    F = str((Commands.getUserDec(id))).replace("'", '').replace('[', '').replace(']', '').replace(',', '').replace(
+        '(', '-').replace(')', '')
+    for x in F:
+        if x != '-':
+            mess = mess + x
+        else:
+            mess = mess + '\n-'
+    await message.reply(mess)
+
+
+
+
+
+@dp.message((F.text.lower() == "тема"))
+async def cmd_start(message: Message):
+    try:
+        id = int(uid(message.from_user))
+        print(Commands.gettemes(id))
+        tem = choice((Commands.gettemes(id)))[0]#<<<<!!!!
+        print(f'ТЕМА:{tem}')#<<<<
+        us = (int((str((Commands.gettema(tem)).Author)).replace("[", "").replace("]", "")))
+        descr = ((str((Commands.gettema(tem)).Description)).replace("[", "").replace("]", "").replace("'", ""))
+        print(f'us:{us},tema:{tem},descr:{descr}')#<<<<
+        us = Commands.getuser(us).name
+        builder = InlineKeyboardBuilder()
+        builder.add(InlineKeyboardButton(
+            text="Избранное",
+            callback_data="fav"))
+        builder.add(InlineKeyboardButton(
+            text="Буду решать",
+            callback_data="dec"))
+        await message.answer(
+            f'"{tem}" Автор - @{us}\n Описание: {descr}',
+            reply_markup=builder.as_markup()
+        )
+        Tema.tema(tem,Viewers=[id]).add()
+    except:
+        await message.answer('Новых тем нет, попробуйте позже позже')
+
+
+@dp.callback_query(F.data == "fav")
+async def send_random_value(callback: CallbackQuery):
+    user = callback.from_user.id
+    print(user)
+    mess = callback.message.text
+    print(mess)
+    tem = ''
+    flg = 0
+    for i in mess:
+        if i =='"':
+            flg+=1
+        if flg<=2:
+            tem+=i
+        if flg >=2:
+            break
+    tem = tem.replace('"','')
+    Tema.tema(tem, follower=[user]).add()
+    rtem = (Commands.gettema(tem))
+    print(rtem)
+    await callback.answer(
+        text="Тема сохранена",
+        show_alert=True
+    )
+
+@dp.callback_query(F.data == "dec")
+async def send_random_value(callback: CallbackQuery):
+    user = callback.from_user.id
+    print(user)
+    mess = callback.message.text
+    print(mess)
+    tem = ''
+    flg = 0
+    for i in mess:
+        if i =='"':
+            flg+=1
+        if flg<=2:
+            tem+=i
+        if flg >=2:
+            break
+    tem = tem.replace('"','')
+    Tema.tema(tem, Decisive=[user]).add()
+    rtem = (Commands.gettema(tem))
+    print(rtem)
+    await callback.answer(
+        text="Вы записаны в список тех, кто работает над темой",
+        show_alert=True
+    )
+
+
+
+@dp.message()
+async def echo(message: Message):
+    id = int(uid(message.from_user))
+    status = (Commands.getuser(id)).cash#<<<<
+    pr = ((Commands.getuser(id)).prfl)
+    if status == 1:
+        temm = ''
+        descr = ''
+        flg = 0
+        for i in message.text:
+            if i == ';':
+                flg = 1
+            if flg == 0:
+                temm = temm+i
+            if flg ==1:
+                descr = descr+i
+        (Tema.tema(temm,prfl=pr,Description=[descr[2:]],Author=[id])).add(show=True)#<<<<
+        print(pr)
+        await message.answer('Тема записана!')
+        id = int(uid(message.from_user))
+        pr = (Commands.getuser(id)).prfl
+        us = (Commands.getuser(id)).name
+        Users.User(id, prfl=pr, name=us, cash=0).add(Show=True)
+        print(str((Commands.getuser(id))))
+        print(Commands.getuser(id).name)
+    elif status == 2:
+        try:
+            (Tema.tema(message.text,Description=[""],Author=[id])).add(show=True,remove = True)#<<<<
+            id = int(uid(message.from_user))
+            pr = (Commands.getuser(id)).prfl
+            us = (Commands.getuser(id)).name
+            Users.User(id, prfl=pr, name=us, cash=0).add(Show=True)
+            await message.answer('Тема удалена!')
+            print(str((Commands.getUserTemes(id))))#<<<< (little trolling)
+            print(Commands.getuser(id).name)
         except:
-            if str(date.emoji) == '🎯':
-                role = disnake.utils.get(guild.roles, name="Создатели тем")
-                role2 = disnake.utils.get(guild.roles, name="Ищущие тем")
-                print(guild, member)
-                await member.add_roles(role)
-                await member.remove_roles(role2)
-                global prfl
-                for i in uroles:
-                    if i in prfl:
-                        Role = disnake.utils.get(guild.roles, name=i)
-                        await member.remove_roles(Role)
-                global basedstrE
-                mess = basedstrE
-                msg = await member.send(mess)
-                await msg.add_reaction('🧬')
-                await msg.add_reaction('⚙️')
-                await msg.add_reaction('📈')
-            if str(date.emoji) == '❔':
-                role = disnake.utils.get(guild.roles, name="Ищущие тем")
-                role2 = disnake.utils.get(guild.roles, name="Создатели тем")
-                print(guild, member)
-                await member.add_roles(role)
-                await member.remove_roles(role2)
-                global basedstrS
-                mess = basedstrS
-                msg = await member.send(mess)
-                await msg.add_reaction('🦠')
-                await msg.add_reaction('🔩')
-                await msg.add_reaction('📋')
-        print(uroles)
-        # Выдается роль Биохим/Физмат/Соцэк предлагающему (множественный выбор невозможен)
-        global pseudotheme
-        global eprfl
-        global sprfl
-        if str(date.emoji) in eprfl and member != bot.user and "Создатели тем" in uroles:
-            print(guild, member)
-            for l in eprfl:
-                if str(date.emoji) == l:
-                    role = disnake.utils.get(guild.roles, name=prfl[eprfl.index(str(date.emoji))])
-                    await member.add_roles(role)
-                    mess = f'Итак, ваш профиль - {prfl[eprfl.index(str(date.emoji))]}\nЧтобы предложить тему напишите "!предложить тему" \n (пример: !предложить тему **ваша тема**)'
-                    await message.reply(mess)
-                    print(l + "send", prfl[eprfl.index(str(date.emoji))])
-                else:
-                    role2 = disnake.utils.get(guild.roles, name=prfl[eprfl.index(l)])
-                    await member.remove_roles(role2)
-                    print(l + "los")
-                print(member.roles)
-        # Выдается роль Биохим/Физмат/Соцэк ищущему (возможен множественный выбор)
-        if "Ищущие тем" in uroles and str(date.emoji) in sprfl:
-            role = disnake.utils.get(guild.roles, name=prfl[sprfl.index(str(date.emoji))])
-            print(guild, member)
-            await member.add_roles(role)
-            mess = 'Для того, чтобы получить новую тему нажмите 🔄\nДля того, чтобы сохранить тему в избранное нажмите ⭐'
-            msg = await message.reply(mess)
-            await msg.add_reaction('🔄')
-        # Выдача темы ищущему
-        if str(date.emoji) == '🔄':
-            if len(uroles) > 2:
-                prf = []
-                for h in uroles:
-                    if h in prfl:
-                        prf.append(h)
-                tema = DB.gettema(prf,date.user_id)
-                if len(tema)>0:
-                    print("Дебаг базы")
-                    # 1 критерий минимальное количество просмотров
-                    min_view = min([int(x[3]) for x in tema])
-                    print(min_view)
-                    # 2 максимальное колическво авторов для тем где количество просмотров равно минимальному
-                    max_authors = max([x[1].count("@") for x in tema if int(x[3]) == min_view])
-                    print(max_authors)
-                    # 3 минимально количество фоловеров для тем где: количество просмотров соответствует минимальному и количество авторов соответствует максимальному
-                    min_follow = min(
-                        [x[2].count("@") for x in tema if int(x[3]) == min_view and x[1].count("@") == max_authors])
-                    print(min_follow)
-                    # 4 массив на выход состоящий из кортежей строк удовлетворяющих условию: количество просмотров равно минимальному, количество авторов равно максимальному и количество фолловеров равно минимальному
-                    out = [x for x in tema if
-                           int(x[3]) == min_view and x[1].count("@") == max_authors and x[2].count("@") == min_follow]
-                    # рандом из того что осталось
-                    mess = random.choice(out)
-                    # + просмотр на выбранную тему
-                    DB.record(mess[0])
-                    # вывод
-                    msg = await message.reply(mess[0] + " Предложил(и):" + mess[1][2:])
-                    await msg.add_reaction('🔄')
-                    await msg.add_reaction('⭐')
-                else:
-                    await message.reply("Подходящая тема не найдена")
+            await message.answer('Такой темы нет, \nпроверьте правильность написания темы\n(Проверьте, что тема написана без кавычек, знаков препинаний и лишних пробелов) ')
+    elif status == 3:
+        try:
+            id = int(uid(message.from_user))
+            pr = (Commands.getuser(id)).prfl
+            us = (Commands.getuser(id)).name
+            us2 = (Commands.getuser((Commands.gettema(message.text)).Author[0])).name
+            print(Commands.gettema(message.text))
+            Users.User(id, prfl=pr, name=us, cash=0).add(Show=True)
+            prf = int((Commands.gettema(message.text)).prfl)
+            if prf == 1:
+                p = 'Физмат'
+            if prf == 2:
+                p = 'Биохим'
+            if prf == 3:
+                p = 'Соцэконом'
+            mess = f'Автор: @{us2} \nПрофиль: {p} \n'
+            mess += f'Описание: {str((Commands.gettema(message.text)).Description).replace("[","").replace("]","")} \n'
+            if us == us2:
+                mess += f'Подписчики: {len(list((Commands.gettema(message.text)).follower))} \n'
+                mess += f'Просмотры: {len(list((Commands.gettema(message.text)).Viewers))} \n'
+            iddqd = ''
+            for i in (list((Commands.gettema(message.text)).Decisive)):
+                i = int(str(i).replace('[','').replace("'","").replace(']',''))
+                iddqd = iddqd+str(i)+' '
+            if us == us2 or str(id) in iddqd:
+                mess += f'Решающие: \n'
+                for i in (list((Commands.gettema(message.text)).Decisive)):
+                    i = int(str(i).replace('[','').replace("'","").replace(']',''))
+                    mess += f'@{(Commands.getuser(i).name)}\n'
+            await message.answer(mess)
+        except:
+            await message.answer(
+                'Такой темы нет, \nпроверьте правильность написания темы\n(Проверьте, что тема написана без кавычек, знаков препинаний и лишних пробелов) ')
+    elif status == 4:
+        try:
+            (Tema.tema(message.text,Description=[""], follower=[id])).add(show=True,remove = True)#<<<<
+            id = int(uid(message.from_user))
+            pr = (Commands.getuser(id)).prfl
+            us = (Commands.getuser(id)).name
+            Users.User(id, prfl=pr, name=us, cash=0).add(Show=True)
+            await message.answer('Тема удалена из избранного!')
+            print(str((Commands.getUserTemes(id))))#<<<< (little trolling)
+            print(Commands.getuser(id).name)
+        except:
+            await message.answer('Такой темы нет, \nпроверьте правильность написания темы\n(Проверьте, что тема написана без кавычек, знаков препинаний и лишних пробелов) ')
+    else:
+        await message.answer('Неправильная команда, проверьте правильность введенного текста')
+#
+#
+#
+#
+#
+#
 
-        if str(date.emoji) == '⭐' and "Ищущие тем" in uroles:
-            channel = await member.create_dm()
-            msg = await channel.fetch_message(date.message_id)
-            out=message.content[:msg.content.index(" Предложил(и):")]
-            print(out)
-            await message.reply(DB.follow(out,date.user_id,True))
-@bot.event
-async def on_raw_reaction_remove(date):
-    global guild
-    member = guild.get_member(date.user_id)
-    uroles = []
-    for x in (member.roles):
-        uroles.append(x.name)
-    print(uroles)
-    print('-' + str(date.emoji))
-    if member != bot.user:
-        if str(date.emoji) == '🎯' and "Ищущие тем" in uroles:
-            role = disnake.utils.get(guild.roles, name="Создатели тем")
-            print(guild, member)
-            await member.remove_roles(role)
-        if str(date.emoji) == '❔' and "Создатели тем" in uroles:
-            role = disnake.utils.get(guild.roles, name="Ищущие тем")
-            print(guild, member)
-            await member.remove_roles(role)
-        if str(date.emoji) == '🧬' or str(date.emoji) == '🦠':
-            role = disnake.utils.get(guild.roles, name="Биохим")
-            print(guild, member)
-            await member.remove_roles(role)
-        if str(date.emoji) == '⚙️' or str(date.emoji) == '🔩':
-            role = disnake.utils.get(guild.roles, name="Физмат")
-            print(guild, member)
-            await member.remove_roles(role)
-        if str(date.emoji) == '📈' or str(date.emoji) == '📋':
-            role = disnake.utils.get(guild.roles, name="Соцэконом")
-            print(guild, member)
-            await member.remove_roles(role)
-        if str(date.emoji) == '⭐' and "Ищущие тем" in uroles:
-            channel=await member.create_dm()
-            msg=await channel.fetch_message(date.message_id)
-            await msg.reply(DB.follow(msg.content,date.user_id,False))
-bot.run(token)
+#не трогай, это техническое
+async def main():
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
+if __name__ == "__main__":
+    asyncio.run(main())
